@@ -15,7 +15,7 @@ const port = 3000;
 
 // Configurar CORS para permitir encabezados como Content-Type
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: 'https://front-end-three-ivory.vercel.app',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
