@@ -15,7 +15,7 @@ const port = 3000;
 
 // Configurar CORS para permitir encabezados como Content-Type
 app.use(cors({
-  origin: 'https://front-end-lime-eight.vercel.app',
+  origin: 'https://frontend-mvx5.onrender.com',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
