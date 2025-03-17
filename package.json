@@ -16,7 +16,8 @@
     "express": "^4.21.2",
     "google-auth-library": "^9.15.1",
     "googleapis": "^144.0.0",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "node-cache": "^5.1.2"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
