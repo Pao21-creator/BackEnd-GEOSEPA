@@ -3,8 +3,7 @@ const { authenticate } = require('../auth/apiEngine');
 
 // Fechas de referencia específicas cada 8 días
 var fechasReferencia = ['01/01', '09/01', '17/01', '25/01', '02/02', '10/02', '18/02', '26/02', '06/03', '14/03', '22/03', '30/03','07/04', '15/04', '23/04', '01/05', '09/05', '17/05', '25/05', '02/06', '10/06', '18/06', '26/06', '04/07','12/07', '20/07', '28/07', '05/08', '13/08', '21/08', '29/08', '06/09','14/09', '22/09', '30/09', '08/10', '16/10', '24/10', '01/11', '09/11', '17/11', '25/11', '03/12', '11/12', '19/12', '27/12'];
-var valoresDeNievePorFecha = [];  // Lista para almacenar los promedios de nieve por fecha
-var fechaGrafico = [];
+
 
 async function graficoAnual2Años(Cuenca, año) {
   try {
@@ -18,6 +17,10 @@ async function graficoAnual2Años(Cuenca, año) {
       .filterBounds(cuenca);  // Filtrar por la geometría de la cuenca
 
     const promises = [];  // Lista para almacenar las promesas
+
+    // Inicializamos los arreglos dentro de la función para evitar la acumulación entre ejecuciones
+    var valoresDeNievePorFecha = [];
+    var fechaGrafico = [];
 
     // Usamos un bucle `for...of` para recorrer todas las fechas
     for (let fecha of fechasReferencia) {
@@ -50,8 +53,14 @@ async function graficoAnual2Años(Cuenca, año) {
           new Promise((resolve, reject) => {
             isValid.evaluate(function(value) {
               if (value !== null && value !== undefined) {
-               if(!valoresDeNievePorFecha.includes(value))valoresDeNievePorFecha.push(value);
-                if(!fechaGrafico.includes(fecha))fechaGrafico.push(fecha);
+                // Evitar acumulación de valores: verificamos si ya está en el arreglo antes de agregar
+                if (!valoresDeNievePorFecha.includes(value)) {
+                  valoresDeNievePorFecha.push(value);
+                }
+                // Evitar acumulación de fechas: verificamos si ya está en el arreglo antes de agregar
+                if (!fechaGrafico.includes(fecha)) {
+                  fechaGrafico.push(fecha);
+                }
                 resolve();  // Resolver la promesa una vez que se procesó la imagen
               } else {
                 console.log('Imagen descartada, sin datos válidos para la fecha:', fecha);
@@ -69,9 +78,9 @@ async function graficoAnual2Años(Cuenca, año) {
     await Promise.all(promises);
 
     const result = {
-        valoresDeNievePorFecha: valoresDeNievePorFecha,  // Array con los valores de nieve
-        fechaGrafico: fechaGrafico  // Array con las fechas para graficar
-      };
+      valoresDeNievePorFecha: valoresDeNievePorFecha,  // Array con los valores de nieve
+      fechaGrafico: fechaGrafico  // Array con las fechas para graficar
+    };
 
     return result;
 
@@ -79,6 +88,7 @@ async function graficoAnual2Años(Cuenca, año) {
     throw new Error('Error en Earth Engine: ' + error.message);
   }
 }
+
 
 
 module.exports = { graficoAnual2Años };
