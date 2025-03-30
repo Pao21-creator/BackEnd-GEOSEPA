@@ -140,6 +140,11 @@ app.get('/promedio', async (req, res) => {
   }
 });
 
+app.get('/status', (req, res) => {
+  res.status(200).send('Backend disponible');
+});
+
+
 // Ruta principal para verificar el funcionamiento del backend
 app.get('/', (req, res) => {
   res.send('¡Servidor de Earth Engine está en funcionamiento!');
