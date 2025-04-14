@@ -1,0 +1,29 @@
+export default defineConfig({
+  base: '/dist/', // 👈 este es el cambio clave
+  plugins: [react()],
+  server: {
+    port: process.env.PORT || 5173,  
+    host: true,  
+    historyApiFallback: true,
+    allowedHosts: ['frontend-mvx5.onrender.com']
+  }
+})
+
+
+// se llama htdocs/dist/.htaccess
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /dist/
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /dist/index.html [L]
+</IfModule>
+
+//Abí httpd.conf (menú "Config" en XAMPP → "Apache (httpd.conf)")
+<Directory "C:/xampp/htdocs">
+    AllowOverride All
+    Require all granted
+</Directory>
+
