@@ -55,8 +55,6 @@ async function calcularPromedio(cuenca, imagenesPorFecha, valoresDeNievePorFecha
 // Función que maneja la carga y procesamiento de las imágenes dependiendo del año
 async function graficoAnualCuenca(Cuenca, año) {
   try {
-    // Llamamos a la función de autenticación
-    await authenticate();
 
     const cuenca = ee.FeatureCollection('projects/geosepa/assets/cuencas/' + `${Cuenca}`);
     var imgYear = ee.ImageCollection('MODIS/061/MOD10A2')

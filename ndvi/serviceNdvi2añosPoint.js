@@ -52,13 +52,11 @@ async function obtenerValorNdviPunto(imagenMasCercana, punto) {
 async function graficoNdviPunto(punto, año) {
   try {
 
-    // Convertimos el punto en una geometría de Earth Engine
     const pointGeom = ee.Geometry.Point(punto[1], punto[0]);
 
-    // Usamos imágenes de NOAA VIIRS para NDVI
     const dataset = ee.ImageCollection('MODIS/061/MOD13Q1')
       .select('NDVI')
-      .filterBounds(pointGeom);  // Filtramos directamente por el punto
+      .filterBounds(pointGeom);  
 
     // Limpiar arrays globales
     valoresNdviPunto = [];
@@ -81,13 +79,12 @@ async function graficoNdviPunto(punto, año) {
       }
     });
 
-    // Esperamos a que todas las promesas se resuelvan
     await Promise.all(promises);
 
-    // Generamos el resultado
+
     const result = {
-      fechaGrafico,  // Fechas correspondientes
-      valoresNdviPunto,  // Valores de NDVI para cada fecha
+      fechaGrafico,  
+      valoresNdviPunto,  
     };
 
     // Limpiar arrays globales

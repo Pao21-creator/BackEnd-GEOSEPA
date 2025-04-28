@@ -10,8 +10,6 @@ export default defineConfig({
 })
 
 
-// se llama htdocs/dist/.htaccess
-
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /dist/
@@ -20,6 +18,7 @@ export default defineConfig({
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /dist/index.html [L]
 </IfModule>
+
 
 //Abí httpd.conf (menú "Config" en XAMPP → "Apache (httpd.conf)")
 <Directory "C:/xampp/htdocs">
