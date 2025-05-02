@@ -5,6 +5,8 @@ require('dotenv').config();  // Cargar las variables de entorno
 // Si necesitas deshabilitar la verificación de certificados SSL (solo en entornos controlados)
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
+const privateKey = JSON.parse(process.env.EE_PRIVATE_KEY);
+
 // Función de autenticación utilizando la clave privada
 async function authenticate() {
   return new Promise((resolve, reject) => {
