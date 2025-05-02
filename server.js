@@ -30,7 +30,7 @@ async function authenticateOnce() {
 }
 
 app.use(cors({
-  origin: 'https://frontend-mvx5.onrender.com',
+  origin: 'https://geosepacya.up.railway.app',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
