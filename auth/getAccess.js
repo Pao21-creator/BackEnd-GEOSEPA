@@ -1,5 +1,5 @@
 const { JWT } = require('google-auth-library');
-const privateKey = require('../private-key.json');
+const privateKey = require('./private-key/private-key.json');
 const ee = require('@google/earthengine');
 
 // Configura el JWT con la clave privada

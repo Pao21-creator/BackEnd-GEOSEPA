@@ -26,10 +26,11 @@ async function graficoAnual2Años(Cuenca, año) {
       var nearestImage = imgYear.filterDate(currentDate.advance(-7, 'days'), currentDate.advance(7, 'days')).first();
 
       if (nearestImage && nearestImage.bandNames().length().gt(0)) {
-        var imagenMasCercana = nearestImage.clip(cuenca);
+         var imagen = nearestImage.clip(cuenca);
+         var imagenMasCercana = imagen.eq(200);
 
         var isValid = imagenMasCercana.reduceRegion({
-          reducer: ee.Reducer.mean(),
+          reducer: ee.Reducer.sum(),
           geometry: cuenca,
           scale: 500,
           maxPixels: 1e8

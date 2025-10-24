@@ -1,5 +1,5 @@
 const ee = require('@google/earthengine');
-const privateKey = require('../private-key.json');  // Asegúrate de que el archivo de la clave es correcto
+const privateKey = require('./private-key/private-key.json');
 require('dotenv').config();  // Cargar las variables de entorno
 
 // Si necesitas deshabilitar la verificación de certificados SSL (solo en entornos controlados)

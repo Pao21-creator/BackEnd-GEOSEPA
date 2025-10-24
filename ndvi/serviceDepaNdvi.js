@@ -6,10 +6,7 @@ var fechasReferencia = ['01/01', '17/01', '02/02', '18/02', '06/03', '22/03', '0
 '09/05', '25/05', '10/06', '26/06', '12/07', '28/07', '13/08', '29/08', 
 '14/09', '30/09', '16/10', '01/11', '17/11', '03/12', '19/12'];
 
-// Crear una lista para almacenar las imágenes de NDVI para cada fecha
-var imagenesPorFecha = [];
-let valoresNdviPunto = [];
-var fechaGrafico = [];
+
 
 // Función para obtener la imagen más cercana para cada fecha
 async function obtenerImagenValida(dataset, fecha, department, año) {
@@ -39,73 +36,78 @@ async function obtenerImagenValida(dataset, fecha, department, año) {
 
 
 
-// Función para calcular el promedio de las imágenes de NDVI
-async function calcularPromedio(depa) {
-
+async function obtenerUrlsImagenes(indiceImagenes) {
   try {
-     
-      if (!imagenesPorFecha || imagenesPorFecha.length === 0) {
-          throw new Error('No hay imágenes disponibles para calcular el promedio');
-      }
+    const customPalette = [
+      '1F12D4', 'A903D6', 'F80100', 'C99811',
+      'FFFE08', '7BF319', '0EE517', '2E9936',
+    ];
 
- 
-      var imagenPromedioYearAjustada = imagenesPorFecha[0].multiply(0.01);
+    const ndviVis = {
+      min: 0,
+      max: 80,
+      palette: customPalette,
+      opacity: 1,
+    };
 
- 
-      const customPalette = [
-          '1F12D4',  
-          'A903D6',  
-          'F80100',  
-          'C99811',  
-          'FFFE08', 
-          '7BF319',  
-          '0EE517',  
-          '2E9936',  
-      ];
+    const urls = await Promise.all(
+      indiceImagenes.map(async (img) => {
+        const imagenVisualizada = img.multiply(0.01).visualize(ndviVis);
+        const mapId = await imagenVisualizada.getMapId();
+        return mapId.urlFormat;
+      })
+    );
 
- 
-      const ndviVis = {
-          min: 0,   
-          max: 80, 
-          palette: customPalette, 
-          opacity: 1
-      };
-
-
-
-      var imagenConEstilo = imagenPromedioYearAjustada.visualize(ndviVis);
-
-      var mapUrlYear = await imagenConEstilo.getMapId().urlFormat;
-
-     
-      const geomOutline = depa;
-
-      
-      const outlineMapId = await ee.Image().paint({
-          featureCollection: geomOutline,
-          color: 1,
-          width: 2,
-      }).getMapId({
-          palette: ['666666'],  
-          min: 0,
-          max: 1,
-      });
-
-    
-      let outlineUrl = outlineMapId.urlFormat;
-
-   
-      return {
-          urlYear: mapUrlYear,
-          outlineUrl: outlineUrl,
-          fechaGrafico: fechaGrafico,  
-          valoresNdviPunto: valoresNdviPunto, 
-      };
-  } catch (error) {
-      console.error('Error al calcular el promedio de las imágenes:', error);
-      throw new Error('Error al calcular el promedio');
+    return urls;
+  } catch (err) {
+    console.error('Error al obtener URLs de imágenes:', err);
+    throw err;
   }
 }
+
+
+async function obtenerUrlsImgClasificadas(depart, año) {
+  try {
+    const paletaClasificacion = [
+      '#255d2a', // 1 - Superior al Máximo (verde oscuro)
+      '#00ff00', // 2 - Superior al Promedio (verde claro)
+      '#ffffff', // 3 - Igual al Promedio (blanco)
+      '#f4a300', // 4 - Inferior al Promedio (naranja)
+      '#b30000', // 5 - Inferior al Mínimo (rojo oscuro)
+      '#bfbfbf'  // 6 - Sin dato (gris claro)
+    ];
+
+    const visClasificacion = {
+      min: 1,
+      max: 6,
+      palette: paletaClasificacion
+    };
+
+    const stackClasificado = ee.Image('projects/geosepa/assets/AnomaliaNdvi/Anomalia' + año);
+
+    const bandas = await stackClasificado.bandNames().getInfo();
+
+    const imagenesClasificadas = bandas.map(nombreBanda =>
+      stackClasificado.select(nombreBanda).clip(depart)
+    );
+
+    const urls = await Promise.all(
+      imagenesClasificadas.map(async (img) => {
+        const imagenVisualizada = img.visualize(visClasificacion);
+        const mapId = await imagenVisualizada.getMapId();
+        return mapId.urlFormat;
+      })
+    );
+
+    return urls;
+  } catch (err) {
+    console.error('Error al obtener URLs de imágenes clasificadas:', err);
+    throw err;
+  }
+}
+
+
+
 
 // Función para obtener el valor de NDVI en el punto para cada imagen
 async function obtenerValorNdviPunto(imagenMasCercana, punto) {
@@ -151,26 +153,38 @@ async function procesarFechasConLimite(dataset, fechas, departSeleccionado, año
   const resultados = [];
   let index = 0;
 
-  async function procesarLote() {
-    while (index < fechas.length) {
-      const fecha = fechas[index++];
-      try {
-        const imagenMasCercana = await obtenerImagenValida(dataset, fecha, departSeleccionado, año);
-        if (imagenMasCercana !== null) {
-          const valorNdvi = await obtenerValorNdviPunto(imagenMasCercana, punto);
-          resultados.push({
-            fecha,
-            imagen: imagenMasCercana,
-            valorNdvi
-          });
-        } else {
-          console.log('Imagen descartada para la fecha:', fecha);
+const indiceFecha = {};
+fechas.forEach((f, i) => {
+  indiceFecha[f] = i;
+});
+
+async function procesarLote() {
+  while (index < fechas.length) {
+    const fecha = fechas[index++];
+    try {
+      const imagenMasCercana = await obtenerImagenValida(dataset, fecha, departSeleccionado, año);
+      if (imagenMasCercana !== null) {
+        const valorNdvi = await obtenerValorNdviPunto(imagenMasCercana, punto);
+
+        const bandaIndex = indiceFecha[fecha];
+        if (bandaIndex === undefined) {
+          console.warn(`Fecha ${fecha} no tiene índice de banda asociado.`);
+          continue;
         }
-      } catch (err) {
-        console.error(`Error procesando fecha ${fecha}:`, err);
+
+        resultados.push({
+          fecha,
+          imagen: imagenMasCercana,
+          valorNdvi
+        });
+      } else {
+        console.log('Imagen descartada para la fecha:', fecha);
       }
+    } catch (err) {
+      console.error(`Error procesando fecha ${fecha}:`, err);
     }
   }
+}
 
   const tareas = Array.from({ length: concurrencia }, () => procesarLote());
   await Promise.all(tareas);
@@ -179,6 +193,10 @@ async function procesarFechasConLimite(dataset, fechas, departSeleccionado, año
 
 // ----------------------------------------------
 async function graficoNdviDepa(provincia, localidad, año, punto) {
+    var imagenesPorFecha = [];
+    let fechaGrafico = [];
+    let valoresNdviPunto = [];
+
   try {
  
     const departamentos = ee.FeatureCollection('projects/geosepa/assets/depart/departamentos');
@@ -199,14 +217,42 @@ async function graficoNdviDepa(provincia, localidad, año, punto) {
     fechaGrafico = resultados.map(r => r.fecha);
     valoresNdviPunto = resultados.map(r => r.valorNdvi);
 
-    const result = await calcularPromedio(departSeleccionado);
+    //const result = await calcularPromedio(departSeleccionado);
+    const urlsImagenesNDVI = await obtenerUrlsImagenes(imagenesPorFecha);
 
-    // Limpiar después de usar
-    imagenesPorFecha = [];
-    fechaGrafico = [];
-    valoresNdviPunto = [];
+    let urlsClasificadas = [];
+    try {
+      urlsClasificadas = await obtenerUrlsImgClasificadas(departSeleccionado, año);
+    } catch (error) {
+      console.warn('No se pudo obtener imágenes clasificadas:', error);
+      // Continúa el procesamiento sin las imágenes clasificadas
+    }
+    
+     
+    const outlineMapId = await ee.Image().paint({
+        featureCollection: departSeleccionado,
+        color: 1,
+        width: 2,
+    }).getMapId({
+        palette: ['666666'],  
+        min: 0,
+        max: 1,
+    });
 
-    return result;
+  
+    let outlineUrl = outlineMapId.urlFormat;
+
+
+ 
+    
+    return {
+  urls: urlsImagenesNDVI,
+  clasificacionUrls: urlsClasificadas,
+  outlineUrl: outlineUrl,
+        fechaGrafico: fechaGrafico,  
+        valoresNdviPunto: valoresNdviPunto, 
+}
+
 
   } catch (error) {
     throw new Error('Error en Earth Engine: ' + error.message);

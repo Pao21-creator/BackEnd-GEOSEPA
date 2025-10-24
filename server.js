@@ -6,8 +6,8 @@ const NodeCache = require('node-cache');
 const { authenticate } = require('./auth/apiEngine');
 //const { PoligonEarthEngine } = require('./EngineServicePolygon');
 //const { PointEarthEngine } = require('./EngineServicePoint');
+const { graficoAguaSueloDepa } = require('./aguaSuelo/aguaSueloDepa');
 const { graficoAnualCuenca } = require('./cuencas/serviceCuencaAnual');
-const { promAnualCuenca } = require('./cuencas/servicioProm');
 const { graficoAnual2Años } = require('./cuencas/serviceCuanca2años');
 const { graficoNdviDepa } = require('./ndvi/serviceDepaNdvi');
 const { graficoNdviPunto } = require('./ndvi/serviceNdvi2añosPoint');
@@ -15,6 +15,8 @@ const { graficoNdviPoligono } = require('./ndvi/serviceNdviPoly');
 const { PromedioNdviPoint, PromedioNdviPoly } = require('./ndvi/promedioNdvi');
 const { verificarPoint } = require('./ndvi/verificarPoint');
 const { graficoInuDepa } = require('./inundacion/serviceInuDepa');
+const { extremosNieve } = require('./cuencas/Extremos');
+const { sendContactEmail } = require('./contacto/mail');
 
 const app = express();
 const port = 3000;
@@ -29,11 +31,22 @@ async function authenticateOnce() {
   }
 }
 
+const allowedOrigins = ['http://localhost', 'http://localhost:5173'];
+
 app.use(cors({
-  origin: 'http://localhost:5173',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: function(origin, callback) {
+    // Permitir solicitudes sin origen (ejemplo: Postman o curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS no permitido para este origen'));
+    }
+  },
+  credentials: true
 }));
+
 
 app.use(express.json());
 
@@ -104,6 +117,24 @@ app.post('/getMapIdCuenca', async (req, res) => {
   } else {
     res.status(400).json({ error: 'Función no válida' });
   }
+});
+
+
+// Gráfico anual por cuenca
+app.post('/getExtremosCuenca', async (req, res) => {
+  const { cuenca} = req.body;
+  const cacheKey = `maxminCuenca-${cuenca}`;
+    try{
+    await processRequestWithCache(req, res, async () => {
+      await authenticateOnce();
+      const extremos = await extremosNieve(cuenca);
+      return extremos;
+    }, cacheKey);
+    } catch(error){
+      console.error('Error en processRequestWithCache:', error);
+      return res.status(500).json({ error: 'Error interno en el servidor' });
+    }
+
 });
 
 // Comparador por cuenca
@@ -266,6 +297,40 @@ app.post('/dataPointNDVI', (req, res) => {
 });
 
 
+/********************************************************************************** */
+
+// AGUA EN EL SUELO --> PRODUCTO DE LUCAS
+
+// Agua Departamental
+app.post('/getMapIdAguaSuelo', async (req, res) => {
+  try {
+    const { año, funcion, point, localidad, provincia } = req.body;
+
+    if (!año || !funcion || !point || !localidad || !provincia) {
+      return res.status(400).json({ error: 'Parámetros incompletos' });
+    }
+
+    if (funcion === 'graficoAnual') {
+      const cacheKey = `graficoAguaDepa-${provincia}-${localidad}-${año}-${point}`;
+
+      await processRequestWithCache(req, res, async () => {
+        await authenticateOnce();
+        const grafico = await graficoAguaSueloDepa(provincia, localidad, Number(año), point);
+        //const promedio = await PromedioNdviPoint(point);
+        //return { grafico, promedio };
+        return { grafico };
+      }, cacheKey);
+    } else {
+      res.status(400).json({ error: 'Función no válida' });
+    }
+  } catch (error) {
+    console.error('Error general en la solicitud:', error);
+    res.status(500).json({ error: 'Error interno en el servidor' });
+  }
+});
+
+/**************************************************************************** */
+
 
 // Ruta temporal de prueba de promedios por cuenca
 app.get('/promedio', async (req, res) => {
@@ -276,6 +341,23 @@ app.get('/promedio', async (req, res) => {
   } catch (error) {
     handleError(res, error);
   }
+});
+
+
+app.post('/contact', async (req, res) => {
+    const formData = req.body;
+
+    if (!formData.name || !formData.email || !formData.requestType || !formData.message) {
+        return res.status(400).json({ message: 'Todos los campos son obligatorios.' });
+    }
+
+    try {
+        const successMessage = await sendContactEmail(formData);
+        res.status(200).json({ message: successMessage });
+    } catch (error) {
+        console.error('Error al enviar el correo:', error.message);
+        res.status(500).json({ message: error.message || 'Error interno del servidor.' });
+    }
 });
 
 // Estado del backend
